@@ -1,0 +1,12 @@
+Spring Core
+	- IOC(Inversion of Control) Container
+	- Dependency Injection (DI)
+	- 3 ways of configuration
+		- xml based configuration
+		- annotation based configuration
+		- java based configuration
+
+
+spring 6
+spring boot 3
+java 17
