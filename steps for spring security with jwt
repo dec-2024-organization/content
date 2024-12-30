@@ -1,0 +1,90 @@
+STEP 1 - Adding spring security
+--------------------------------
+1. add the spring security maven dependency to the pom. xml file
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-security</artifactId>
+    </dependency>
+
+2. Now all the endpoints are secured. (test the endpoints through browser)
+3. So everytime when we try to access an endpoint we have to authenticate ourselves.
+4. default user name is "user" and password is present the spring boot console.
+5. Next add a java based configuration file
+6. Annotate it with @Configuration and @EnableWebSecurity
+7. The configure a SecurityFilterChain bean.
+	@Bean
+	public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+			http.csrf(csrf-> csrf.disable())
+			.authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
+		
+		return http.build();
+	}
+8. Now test the endpoints in browser to see that all endpoints are accessible without authentication
+
+STEP 2 - Securing endpoints through custom username password from DB
+--------------------------------------------------------------------
+1. Create a finder method in UserInfoRepository interface
+	Optional<UserInfoEntity> findByUsername(String username);
+2. Create a CustomUserDetails class which implements UserDetails
+3. Create a CustomUserDetailsService class which implements UserDetailsService
+4. Configure UserDetailsService as a Bean in SpringSecurity configuration file.
+5. Make sure the passwords in the userinfo_details table is bcrypt encoded
+6. Also make sure the fetch type is eager in the ManyToMany mapping of UserInfoEntity
+	@ManyToMany(fetch = FetchType.EAGER)
+7. Configure the BCryptPasswordEncoder in SecurityConfig file
+	@Bean
+	public BCryptPasswordEncoder passwordEncoder() {
+		return new BCryptPasswordEncoder();
+	}
+8. Now start the application and test the endpoints through browser
+
+STEP 3 - Role based Authorization using @PreAuthorize() annotation
+------------------------------------------------------------------
+two ways of configuration
+-------------------------
+	1. configure in SecurityFilterChain bean in the SecurityConfig
+	2. configure using method security ( available from spring boot 3.x onwards)
+  1. In SecurityConfig
+  --------------------
+
+  2. Using method security - @PreAuthorize()
+  ------------------------------------------
+	1. To use method security apply the @EnableMethodSecurity annotation above the SecurityConfig file
+	2. Now use @PreAuthorize("hasAuthority('USER')") above controller methods wherever required.
+
+STEP 4 - Creating our endpoint to validate username and password using spring security
+--------------------------------------------------------------------------------------
+1. configure AuthenticationManager bean in SecurityConfig file
+	@Bean
+	public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+		return config.getAuthenticationManager();
+	}
+
+2. configure DaoAuthenticationProvider bean in SecurityConfig file
+	@Bean
+	public DaoAuthenticationProvider daoAuthenticationProvider() {
+		DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+		provider.setPasswordEncoder(passwordEncoder());
+		provider.setUserDetailsService(userDetailsService());
+		return provider;
+	}
+
+3. create a post endpoint 
+    1. in UserInfoController to validate the incomming username password of the request body
+    2. use AuthenticationManager to do the authentication
+
+	@PostMapping("/users/validate")
+	public ResponseEntity<String> validate(@RequestBody UserInfoEntity userInfo){
+		// here validate the userInfo of requestbody using spring security
+		Authentication auth = manager.authenticate(new UsernamePasswordAuthenticationToken(userInfo.getUsername(), userInfo.getPassword()));
+		if(auth.isAuthenticated()) {
+			return new ResponseEntity<String>("Login SUccess!!", HttpStatus.OK);
+		}else {
+			throw new UsernameNotFoundException("Invalid Credentials!");
+		}
+	}
+
+
+STEP 5 - Including JWT token generation with spring security
+------------------------------------------------------------
